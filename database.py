@@ -1,55 +1,32 @@
-import sqlite3
+import json
+import os
 
-DATABASE = "notices.db"
+DATABASE = "seen_notices.json"
 
 
 def create_database():
-    connection = sqlite3.connect(DATABASE)
+    if not os.path.exists(DATABASE):
+        with open(DATABASE, "w", encoding="utf-8") as file:
+            json.dump([], file)
 
-    cursor = connection.cursor()
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS notices (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            link TEXT NOT NULL UNIQUE,
-            first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
+def load_notices():
+    create_database()
 
-    connection.commit()
-    connection.close()
+    with open(DATABASE, "r", encoding="utf-8") as file:
+        return json.load(file)
 
 
 def notice_exists(link):
-    connection = sqlite3.connect(DATABASE)
-
-    cursor = connection.cursor()
-
-    cursor.execute(
-        "SELECT 1 FROM notices WHERE link = ?",
-        (link,)
-    )
-
-    result = cursor.fetchone()
-
-    connection.close()
-
-    return result is not None
+    notices = load_notices()
+    return link in notices
 
 
 def save_notice(title, link):
-    connection = sqlite3.connect(DATABASE)
+    notices = load_notices()
 
-    cursor = connection.cursor()
+    if link not in notices:
+        notices.append(link)
 
-    cursor.execute(
-        """
-        INSERT OR IGNORE INTO notices (title, link)
-        VALUES (?, ?)
-        """,
-        (title, link)
-    )
-
-    connection.commit()
-    connection.close()
+        with open(DATABASE, "w", encoding="utf-8") as file:
+            json.dump(notices, file, indent=2)
